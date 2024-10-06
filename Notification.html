@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Notifications</title>
+    
+    <link rel="stylesheet" href="adminstyle.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff;
+            color: #333;
+        }
+
+        header {
+            background-color: rgb(165, 75, 75);
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        nav ul li {
+            display: inline;
+            margin: 0 15px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .notification-list {
+            padding: 20px;
+            background-color: #f9f9f9; /* Light grey */
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #eb9c0b; 
+            color: white;
+        }
+
+        .accept-btn, .reject-btn {
+            padding: 5px 10px;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .accept-btn {
+            background-color: #4CAF50; /* Green */
+        }
+
+        .reject-btn {
+            background-color: #f44336; /* Red */
+        }
+
+        .status-message {
+            color: #ef2c1e;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        footer {
+            background-color: rgb(165, 75, 75); 
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+           
+        </header>
+
+        <div class="notification-list">
+            <h2>Rental Requests</h2>
+            <table id="rental-requests">
+                <thead>
+                    <tr>
+                        <th>Book Image</th>
+                        <th>Book Title</th>
+                        <th>No. of Copies</th>
+                        <th>User Name</th>
+                        <th>Status</th>
+                        <th>Lent Date</th>
+                        <th>Return Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rental requests will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+       
+        </footer>
+
+       
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const tableBody = document.querySelector('#rental-requests tbody');
+
+                // Initialize rental requests with some defaults if not already present in local storage
+                function initializeRentalRequests() {
+                    const defaultRequests = [
+                        {
+                            id: '001',
+                            bookImage: 'Book1.jpg',
+                            bookTitle: 'Story',
+                            userName: 'John Doe',
+                            status: 'Pending',
+                            categoryId: '1',
+                            rentDate: null,
+                            returnDate: null
+                        },
+                        {
+                            id: '002',
+                            bookImage: 'Book2.jpg',
+                            bookTitle: 'Harry Potter',
+                            userName: 'Jane Smith',
+                            status: 'Pending',
+                            categoryId: '2',
+                            rentDate: null,
+                            returnDate: null
+                        }
+                    ];
+                    if (!localStorage.getItem('rental-requests')) {
+                        localStorage.setItem('rental-requests', JSON.stringify(defaultRequests));
+                    }
+                }
+
+                // Get rental requests from local storage
+                function getRentalRequests() {
+                    const requests = localStorage.getItem('rental-requests');
+                    return requests ? JSON.parse(requests) : [];
+                }
+
+                // Save rental requests to local storage
+                function setRentalRequests(requests) {
+                    localStorage.setItem('rental-requests', JSON.stringify(requests));
+                }
+
+                // Format date to a readable format
+                function formatDate(dateString) {
+                    const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+                    return new Date(dateString).toLocaleDateString(undefined, options);
+                }
+
+                // Calculate return date by adding 7 days to rent date
+                function calculateReturnDate(rentDate) {
+                    const rentDateObj = new Date(rentDate);
+                    rentDateObj.setDate(rentDateObj.getDate() + 7); // Add 7 days for return date
+                    return rentDateObj.toISOString();
+                }
+
+                // Get the number of copies available for a specific book in a category
+                function getNoOfCopies(categoryId, bookTitle) {
+                    const categoryBooks = JSON.parse(localStorage.getItem(`books-${categoryId}`)) || [];
+                    const book = categoryBooks.find(m => m.title === bookTitle);
+                    return book ? book.noOfCopies : 'N/A';
+                }
+
+                // Display rental requests on the page
+                function displayRentalRequests() {
+                    tableBody.innerHTML = '';
+                    const requests = getRentalRequests();
+
+                    if (requests.length > 0) {
+                        requests.forEach(request => {
+                            const noOfCopies = getNoOfCopies(request.categoryId, request.bookTitle);
+                            const row = document.createElement('tr');
+                            let actionButtons = '';
+
+                            if (request.status === 'Pending') {
+                                actionButtons = `
+                                    <button class="accept-btn" data-id="${request.id}">Accept</button>
+                                    <button class="reject-btn" data-id="${request.id}">Reject</button>
+                                `;
+                            } else {
+                                actionButtons = `<span class="status-message">${request.status}${request.reason ? ': ' + request.reason : ''}</span>`;
+                            }
+
+                            row.innerHTML = `
+                                <td><img src="${request.bookImage}" alt="${request.bookTitle}" style="width: 50px; height: 75px;"></td>
+                                <td>${request.bookTitle}</td>
+                                <td>${noOfCopies}</td>
+                                <td>${request.userName}</td>
+                                <td>${request.status}</td>
+                                <td>${request.rentDate ? formatDate(request.rentDate) : 'N/A'}</td>
+                                <td>${request.returnDate ? formatDate(request.returnDate) : 'N/A'}</td>
+                                <td>${actionButtons}</td>
+                            `;
+
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="8">No rental requests at the moment.</td></tr>';
+                    }
+                }
+
+                // Handle rental request acceptance or rejection
+                function handleRental(requestId, status, reason = '') {
+                    let rentals = getRentalRequests();
+                    rentals = rentals.map(rental => {
+                        if (rental.id === requestId) {
+                            rental.status = status;
+                            if (status === 'Rejected') {
+                                rental.reason = reason;
+                            } else if (status === 'Accepted') {
+                                const rentDate = new Date().toISOString();
+                                const returnDate = calculateReturnDate(rentDate);
+                                rental.rentDate = rentDate;
+                                rental.returnDate = returnDate;
+
+                                // Decrease the number of available copies for the book
+                                const categoryBooks = JSON.parse(localStorage.getItem(`books-${rental.categoryId}`)) || [];
+                                const book = categoryBooks.find(b => b.title === rental.bookTitle);
+                                if (book) {
+                                    book.noOfCopies -= 1;
+                                    localStorage.setItem(`books-${rental.categoryId}`, JSON.stringify(categoryBooks));
+                                }
+                            }
+                        }
+                        return rental;
+                    });
+                    setRentalRequests(rentals);
+                    displayRentalRequests();
+                }
+
+                // Event listeners for accept and reject buttons
+                tableBody.addEventListener('click', (event) => {
+                    if (event.target.classList.contains('accept-btn')) {
+                        const requestId = event.target.getAttribute('data-id');
+                        handleRental(requestId, 'Accepted');
+                    }
+
+                    if (event.target.classList.contains('reject-btn')) {
+                        const requestId = event.target.getAttribute('data-id');
+                        handleRental(requestId,'Rejected');  
+                    }
+                });
+
+                initializeRentalRequests();
+                displayRentalRequests();
+            });
+        </script>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports</title>
+   
+    <link rel="stylesheet" href="adminstyle.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: white; 
+            color: #eb9c0b; /* Dark yellow text */
+        }
+
+        header {
+            background:black;
+            background: rgb(165, 75, 75);
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        nav ul li {
+            display: inline;
+            margin: 0 15px;
+        }
+
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .dashboard {
+            padding: 20px;
+            text-align: center;
+        }
+
+        #report-selection {
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+          
+        }
+
+        th {
+            background-color: #ffff; /* Slightly darker yellow for header */
+        }
+
+        footer {
+            background: rgb(165, 75, 75);
+            color: #fff;
+            text-align: center;
+            padding: 1rem 0;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .status-message {
+            color: red; /* Color for status messages */
+        }
+
+        .footer-content img {
+            width: 25px; /* Adjusted size for social media icons */
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        
+       
+    </header>
+
+    <div class="dashboard">
+        <h1>Reports</h1>
+        <div id="report-selection">
+            <label for="report-type">Select Report Type:</label>
+            <select id="report-type">
+                <option value="inventory">Inventory Report</option>
+                <option value="rental">Rental Report</option>
+                <option value="customer">Customer Report</option>
+            </select>
+        </div>
+        <div id="report-content">
+            <!-- Report tables will be displayed here -->
+        </div>
+    </div>
+
+    <footer>
+ 
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const reportTypeSelect = document.getElementById('report-type');
+            const reportContent = document.getElementById('report-content');
+    
+            function showReport(reportType) {
+                reportContent.innerHTML = ''; // Clear existing content
+    
+                if (reportType === 'inventory') {
+                    displayInventoryReport();
+                } else if (reportType === 'rental') {
+                    displayRentalReport();
+                } else if (reportType === 'customer') {
+                    displayCustomerReport();
+                }
+            }
+
+            // Function to display the inventory report
+            function displayInventoryReport() {
+                const inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    
+                let html = `
+                    <h2>Inventory Report</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Book Image</th>
+                                <th>Book Title</th>
+                                <th>Category</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+    
+                inventory.forEach(book => {
+                    html += `
+                        <tr>
+                            <td><img src="${book.image}" alt="${book.title}" style="width: 50px; height: 75px;"></td>
+                            <td>${book.title}</td>
+                            <td>${book.category}</td>
+                            <td>${book.quantity}</td>
+                        </tr>
+                    `;
+                });
+    
+                html += '</tbody></table>';
+                reportContent.innerHTML = html;
+            }
+
+            // Function to display the rental report
+            function displayRentalReport() {
+                const rentals = JSON.parse(localStorage.getItem('rental-requests')) || [];
+    
+                let html = `
+                    <h2>Rental Report</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Book Title</th>
+                                <th>User Name</th>
+                                <th>Rent Date</th>
+                                <th>Return Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+    
+                rentals.forEach(rental => {
+                    html += `
+                        <tr>
+                            <td>${rental.bookTitle}</td>
+                            <td>${rental.userName}</td>
+                            <td>${formatDate(rental.rentDate)}</td>
+                            <td>${formatDate(rental.returnDate)}</td>
+                            <td>${rental.status}</td>
+                        </tr>
+                    `;
+                });
+    
+                html += '</tbody></table>';
+                reportContent.innerHTML = html;
+            }
+
+            // Function to display the customer report
+            function displayCustomerReport() {
+                const rentals = JSON.parse(localStorage.getItem('rental-requests')) || [];
+                const customers = {};
+                
+                rentals.forEach(rental => {
+                    if (!customers[rental.userName]) {
+                        customers[rental.userName] = {
+                            rentals: [],
+                            status: rental.status // For simplicity, using the status from the last rental
+                        };
+                    }
+                    customers[rental.userName].rentals.push({
+                        bookTitle: rental.bookTitle,
+                        rentDate: rental.rentDate,
+                        returnDate: rental.returnDate
+                    });
+                });
+    
+                let html = `
+                    <h2>Customer Report</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User Name</th>
+                                <th>Book Title</th>
+                                <th>Rent Date</th>
+                                <th>Return Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                Object.keys(customers).forEach(userName => {
+                    customers[userName].rentals.forEach(rental => {
+                        html += `
+                            <tr>
+                                <td>${userName}</td>
+                                <td>${rental.bookTitle}</td>
+                                <td>${formatDate(rental.rentDate)}</td>
+                                <td>${formatDate(rental.returnDate)}</td>
+                                <td>${customers[userName].status}</td>
+                            </tr>
+                        `;
+                    });
+                });
+                html += '</tbody></table>';
+                reportContent.innerHTML = html;
+            }
+
+            function formatDate(dateString) {
+                const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+                return new Date(dateString).toLocaleDateString(undefined, options);
+            }
+
+            // Handle report type selection
+            reportTypeSelect.addEventListener('change', (event) => {
+                showReport(event.target.value);
+            });
+
+            // Display the default report on page load (e.g., Inventory Report)
+            showReport('inventory');
+        });
+    </script>
+</body>
+</html>

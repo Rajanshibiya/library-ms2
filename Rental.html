@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rental Management</title>
+    <link rel="icon" href="image/logo.png" type="image/png">
+    <link rel="stylesheet" href="adminstyle.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: white; /* Light yellow background */
+            color:#eb9c0b; /* Dark yellow text */
+        }
+
+        header {
+            background: rgb(165, 75, 75);; /* Yellow header */
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        nav ul li {
+            display: inline;
+            margin: 0 15px;
+        }
+
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .rental-management {
+            padding: 20px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            
+        }
+
+       
+        .action-btn {
+            background-color:#eb9c0b; /* Button color */
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .action-btn:hover {
+            background-color: #eb9c0b; /* Darker yellow on hover */
+        }
+
+        footer {
+            background: rgb(165, 75, 75);;
+            color: #fff;
+            text-align: center;
+            padding: 1rem 0;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .status-message {
+            color: red; /* Color for overdue alert */
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+      
+    </header>
+
+    <div class="rental-management">
+        <h1>Lental Management</h1>
+        <table id="rental-management-table">
+            <thead>
+                <tr>
+                    <th>Book Image</th>
+                    <th>Book Title</th>
+                    <th>User Name</th>
+                    <th>Lent Date</th>
+                    <th>Return Date</th>
+                    <th>Overdue Alert</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rental management content will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+       
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableBody = document.querySelector('#rental-management-table tbody');
+
+            // Function to get rental data from localStorage
+            function getRentalData() {
+                return JSON.parse(localStorage.getItem('rental-requests')) || [];
+            }
+
+            // Function to update rental data in localStorage
+            function updateRentalData(data) {
+                localStorage.setItem('rental-requests', JSON.stringify(data));
+            }
+
+            // Function to format dates
+            function formatDate(dateString) {
+                const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+                return new Date(dateString).toLocaleDateString(undefined, options);
+            }
+
+            // Function to check if a rental is overdue for collection
+            function isOverdueForCollection(rentDate) {
+                const rentDateObj = new Date(rentDate);
+                const today = new Date();
+                rentDateObj.setDate(rentDateObj.getDate() + 2); // 2 days grace period
+                return today > rentDateObj;
+            }
+
+            // Function to automatically reject overdue rentals
+            function autoRejectOverdueRentals() {
+                let rentals = getRentalData();
+                rentals = rentals.map(rental => {
+                    if (rental.status === 'Accepted' && isOverdueForCollection(rental.rentDate)) {
+                        rental.status = 'Rejected';
+                        rental.reason = 'Automatically rejected due to non-collection within 2 days';
+                    }
+                    return rental;
+                });
+                updateRentalData(rentals);
+            }
+
+            // Function to display rental data
+            function displayRentals() {
+                autoRejectOverdueRentals(); // Check for overdue rentals on page load
+                const rentals = getRentalData();
+                const filteredRentals = rentals.filter(rental => rental.status !== 'Rejected');
+
+                if (filteredRentals.length > 0) {
+                    tableBody.innerHTML = '';
+                    filteredRentals.forEach(rental => {
+                        const row = document.createElement('tr');
+                        let actionButtons = '';
+
+                        if (rental.status === 'Accepted') {
+                            actionButtons = `<button class="action-btn get-btn" data-id="${rental.id}">Get</button>
+                                             <button class="action-btn return-btn hidden" data-id="${rental.id}">Return</button>`;
+                        } else if (rental.status === 'Collected') {
+                            actionButtons = `<button class="action-btn return-btn" data-id="${rental.id}">Return</button>`;
+                        } else if (rental.status === 'Returned') {
+                            actionButtons = '<span class="status-message">Returned</span>';
+                        } else {
+                            actionButtons = '<span class="status-message">No actions available</span>';
+                        }
+
+                        const overdueAlert = rental.status === 'Collected' && isOverdueForCollection(rental.rentDate) ? 'Overdue' : '';
+
+                        row.innerHTML = `
+                            <td><img src="${rental.bookImage}" alt="${rental.bookTitle}" style="width: 50px; height: 75px;"></td>
+                            <td>${rental.bookTitle}</td>
+                            <td>${rental.userName || 'N/A'}</td>
+                            <td>${rental.rentDate ? formatDate(rental.rentDate) : 'N/A'}</td>
+                            <td>${rental.returnDate ? formatDate(rental.returnDate) : 'N/A'}</td>
+                            <td class="status-message">${overdueAlert}</td>
+                            <td>${actionButtons}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="7">No rentals available at the moment.</td></tr>';
+                }
+            }
+
+            // Handle Get and Return button clicks
+            tableBody.addEventListener('click', (event) => {
+                const rentalId = event.target.getAttribute('data-id');
+                let rentals = getRentalData();
+
+                if (event.target.classList.contains('get-btn')) {
+                    rentals = rentals.map(rental => {
+                        if (rental.id === rentalId) {
+                            rental.status = 'Collected';
+                            alert(`${rental.userName} successfully collected the book.`);
+                        }
+                        return rental;
+                    });
+                } else if (event.target.classList.contains('return-btn')) {
+                    rentals = rentals.map(rental => {
+                        if (rental.id === rentalId) {
+                            rental.status = 'Returned';
+                            alert('The book has been successfully returned.');
+                        }
+                        return rental;
+                    });
+                }
+
+                updateRentalData(rentals);
+                displayRentals();
+            });
+
+            // Initial display of rental data
+            displayRentals();
+        });
+    </script>
+</body>
+</html>
